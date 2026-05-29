@@ -26,17 +26,16 @@ user = network.get_user(USERNAME)
 
 # Implement functions for fetching data
 
+def fetch_top_tracks(user, period=pylast.PERIOD_7DAYS, limit=50):
+    """
+    Retrieves the user's top tracks and cleans the data for storage.
 
-# Retrieves the users top tracks as TopItem objects. Cleans the data for storage, 
-# removing informations such as keys and secrets
-# 
-# @param user       The user whose listening to music
-# @param period     The period in which look for songs (1MONTH -> songs played within the last month)
-# @param limit      Limit on the number of tracks to retrieve
-#
-# @return tracks    Array of track dictionary objects
-#
-def fetch_top_tracks(user, period, limit=50):
+    :param user:    pylast User object
+    :param period:  Time window (e.g. pylast.PERIOD_1MONTH)
+    :param limit:   Max number of tracks to retrieve
+    :return:        List of track dictionaries
+    """
+
     # Fetch the tracks
     top_tracks = user.get_top_tracks(limit=limit, period=period)
     tracks = []
@@ -53,4 +52,30 @@ def fetch_top_tracks(user, period, limit=50):
         tracks.append(track)
     return tracks
 
-print(fetch_top_tracks(user, period=pylast.PERIOD_1MONTH))
+
+def fetch_top_artists(user, period=pylast.PERIOD_7DAYS, limit=50):
+    """
+    Retrieves the user's top artists and cleans the data for storage.
+    An additional API call is created for each artist to retrieve their tags (genres)
+
+    :param user:    pylast User object
+    :param period:  Time window (e.g. pylast.PERIOD_1MONTH)
+    :param limit:   Max number of artists to retrieve
+    :return:        List of artist dictionaries
+    """
+
+    # Fetch the top artists
+    top_artists = user.get_top_artists(limit=limit, period=period)
+    artists = []
+
+    # Clean the data
+    for rank, item in enumerate(top_artists, start=1):
+        artist = {
+            "name": item.item.name,
+            "rank": rank,
+            "play_count": item.weight,
+            "tags": [tag.item.name for tag in item.item.get_top_tags(limit=3)],
+            "period": period
+        }
+        artists.append(artist)
+    return artists
