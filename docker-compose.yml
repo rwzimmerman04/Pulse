@@ -1,0 +1,19 @@
+services:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: pulse-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,lambda,dynamodb,apigateway
+      - DEBUG=0
+      - AWS_DEFAULT_REGION=us-west-2
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - "./lambdas:/lambdas"
+    
