@@ -1,0 +1,4 @@
+boto3
+pylast
+requests
+python-dotenv
