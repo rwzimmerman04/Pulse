@@ -36,7 +36,7 @@ def fetch_top_tracks(user, period=pylast.PERIOD_7DAYS, limit=50):
     :return:        List of track dictionaries
     """
 
-    # Fetch the tracks
+    # Fetch the tracks (API call)
     top_tracks = user.get_top_tracks(limit=limit, period=period)
     tracks = []
 
@@ -64,7 +64,7 @@ def fetch_top_artists(user, period=pylast.PERIOD_7DAYS, limit=50):
     :return:        List of artist dictionaries
     """
 
-    # Fetch the top artists
+    # Fetch the top artists (API call)
     top_artists = user.get_top_artists(limit=limit, period=period)
     artists = []
 
@@ -79,3 +79,28 @@ def fetch_top_artists(user, period=pylast.PERIOD_7DAYS, limit=50):
         }
         artists.append(artist)
     return artists
+
+def fetch_recent_tracks(user, limit=50):
+    """
+    Retrieves the user's recent track listens and cleans the data for storage.
+    
+    :param user:    pylast User object
+    :param limit:   Max number of artists to retrieve
+    :return:        List of recent track dictionaries
+    """
+
+    # Fetch the recent tracks (API call)
+    recent_tracks = user.get_recent_tracks(limit=limit)
+    recents = []
+
+    for item in recent_tracks:
+        played = {
+            "name": item.track.title,
+            "artist": item.track.artist.name,
+            "timestamp": item.timestamp,
+            "playback_date": item.playback_date
+        }
+        recents.append(played)
+    return recents
+
+print(fetch_recent_tracks(user))
