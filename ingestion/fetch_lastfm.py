@@ -1,6 +1,12 @@
 import os
 import pylast
+import boto3
+import json
 from dotenv import load_dotenv
+
+# =============================================================================
+# ENVIRONMENT AND SETUP
+# =============================================================================
 
 # Import the environment file
 load_dotenv()
@@ -9,22 +15,18 @@ load_dotenv()
 API_KEY = os.getenv("LASTFM_API_KEY")
 API_SECRET = os.getenv("LASTFM_SECRET")
 USERNAME = os.getenv("LASTFM_USERNAME")
+LS_ENDPOINT = os.getenv("LOCALSTACK_ENDPOINT")
 
-# Create PyLast netork
-network = pylast.LastFMNetwork(
-    api_key=API_KEY,
-    api_secret=API_SECRET,
-    username=USERNAME
-)
+# Retrieve bucket name
+BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 
-# Test connection to network
-user = network.get_user(USERNAME)
-# print(user.get_playcount())
-# print(user.get_top_tracks())
+# Retrieve region
+REGION = os.getenv("AWS_DEFAULT_REGION")
 
+# =============================================================================
+# DATA FETCH FUNCTIONS
+# =============================================================================
 
-
-# Implement functions for fetching data
 
 def fetch_top_tracks(user, period=pylast.PERIOD_7DAYS, limit=50):
     """
@@ -103,4 +105,86 @@ def fetch_recent_tracks(user, limit=50):
         recents.append(played)
     return recents
 
-print(fetch_recent_tracks(user))
+# =============================================================================
+# S3 INTERACTIONS
+# =============================================================================
+
+def get_s3_client():
+    """
+    Creates a session to interact with S3 services.
+
+    :return:    S3 client object
+    """
+
+    # Establish connection with S3
+    s3 = boto3.client(
+        service_name='s3',
+        aws_access_key_id=API_KEY,
+        aws_secret_access_key=API_SECRET,
+        endpoint_url=LS_ENDPOINT,
+    )
+
+    return s3
+
+
+def create_bucket_if_not_exists(s3):
+    """
+    Checks if the bucket exists, if not create a new bucket.
+
+    :param s3:      The S3 client
+    """
+    try:
+        s3.head_bucket(Bucket=BUCKET_NAME)
+        print(f"Bucket {BUCKET_NAME} already exists.")
+    except:
+        print(f"Bucket {BUCKET_NAME} not found. Creating...")
+        s3.create_bucket(
+            Bucket=BUCKET_NAME,
+            CreateBucketConfiguration={'LocationConstraint': REGION}
+        )
+        print(f"Bucket {BUCKET_NAME} created.")
+
+
+def upload_to_s3(s3, data, key):
+    """
+    Uploads data to an S3 bucket.
+
+    :param s3:      The S3 client
+    :param data:    Actual content to upload
+    :param key:     File path to put the data
+    """
+    
+    # Convert the data to json string
+    json_string = json.dumps(data)
+
+    # Upload the JSON string to the s3 bucket
+    s3.put_object(Bucket=BUCKET_NAME, Key=key, Body=json_string)
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+def main():
+    """
+    Entry point and controller for the ingestion step of the pipeline
+    """
+
+    # Retrieve the S3 client
+    s3 = get_s3_client()
+
+    # Establish connection to PyLast network
+    network = pylast.LastFMNetwork(
+        api_key=API_KEY,
+        api_secret=API_SECRET,
+        username=USERNAME
+    )
+
+    # Retrieve the User object
+    user = network.get_user(USERNAME)
+
+    # Create the bucket if it does not exist
+    create_bucket_if_not_exists(s3)
+
+    # Fetch the data
+
+    # Uplaod data to s3
