@@ -209,5 +209,19 @@ def main():
 
     print(" ============= INFO: BEGIN uploading data to S3 ============= \n")
 
+    # Get the date
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+
     # Upload data to s3
-    # ...
+    top_tracks_key = f"top_tracks/{today}.json"
+    upload_to_s3(s3, top_tracks, top_tracks_key)
+    
+    top_artists_key = f"top_artists/{today}.json"
+    upload_to_s3(s3, top_artists, top_artists_key)
+    
+    recent_tracks_key = f"recent_tracks/{today}.json"
+    upload_to_s3(s3, recent_tracks, recent_tracks_key)
+
+
+    if __name__ == "__main__":
+        main()
