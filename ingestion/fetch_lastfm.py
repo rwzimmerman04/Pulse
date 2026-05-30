@@ -21,8 +21,11 @@ LS_ENDPOINT = os.getenv("LOCALSTACK_ENDPOINT")
 # Retrieve bucket name
 BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 
-# Retrieve region
+# Retrieve AWS variables
 REGION = os.getenv("AWS_DEFAULT_REGION")
+AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
+
 
 # =============================================================================
 # DATA FETCH FUNCTIONS
@@ -134,8 +137,8 @@ def get_s3_client():
     # Establish connection with S3
     s3 = boto3.client(
         service_name='s3',
-        aws_access_key_id=API_KEY,
-        aws_secret_access_key=API_SECRET,
+        aws_access_key_id=AWS_KEY,
+        aws_secret_access_key=AWS_SECRET,
         endpoint_url=LS_ENDPOINT,
     )
 
@@ -210,7 +213,7 @@ def main():
     print(" ============= INFO: BEGIN uploading data to S3 ============= \n")
 
     # Get the date
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now(datetime.UTC).strftime("%Y-%m-%d")
 
     # Upload data to s3
     top_tracks_key = f"top_tracks/{today}.json"
@@ -223,5 +226,5 @@ def main():
     upload_to_s3(s3, recent_tracks, recent_tracks_key)
 
 
-    if __name__ == "__main__":
-        main()
+if __name__ == "__main__":
+    main()
