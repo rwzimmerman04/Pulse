@@ -2,10 +2,11 @@ import os
 import pylast
 import boto3
 import json
+from datetime import datetime
 from dotenv import load_dotenv
 
 # =============================================================================
-# ENVIRONMENT AND SETUP
+# ENVIRONMENT SETUP
 # =============================================================================
 
 # Import the environment file
@@ -106,6 +107,20 @@ def fetch_recent_tracks(user, limit=50):
     return recents
 
 # =============================================================================
+# MAIN
+# =============================================================================
+
+def get_lastfm_network():
+    """
+    Establish a connection with the user's lastfm network
+    """
+    return pylast.LastFMNetwork(
+        api_key=API_KEY,
+        api_secret=API_SECRET,
+        username=USERNAME
+    )
+
+# =============================================================================
 # S3 INTERACTIONS
 # =============================================================================
 
@@ -173,11 +188,7 @@ def main():
     s3 = get_s3_client()
 
     # Establish connection to PyLast network
-    network = pylast.LastFMNetwork(
-        api_key=API_KEY,
-        api_secret=API_SECRET,
-        username=USERNAME
-    )
+    network = get_lastfm_network()
 
     # Retrieve the User object
     user = network.get_user(USERNAME)
@@ -185,6 +196,18 @@ def main():
     # Create the bucket if it does not exist
     create_bucket_if_not_exists(s3)
 
-    # Fetch the data
+    print(" ============= INFO: BEGIN fetching data from Last.fm ============= \n")
 
-    # Uplaod data to s3
+    # Fetch the top tracks
+    top_tracks = fetch_top_tracks(user, period=pylast.PERIOD_7DAYS)
+
+    # Fetch the top artists
+    top_artists = fetch_top_artists(user, period=pylast.PERIOD_7DAYS)
+
+    # Fetch the recent tracks
+    recent_tracks = fetch_recent_tracks(user)
+
+    print(" ============= INFO: BEGIN uploading data to S3 ============= \n")
+
+    # Upload data to s3
+    # ...
