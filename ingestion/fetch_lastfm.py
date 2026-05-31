@@ -154,7 +154,7 @@ def main():
     """
 
     # Retrieve the S3 client
-    s3 = utils.get_aws_client('s3')
+    s3 = get_aws_client('s3')
 
     # Establish connection to PyLast network
     network = get_lastfm_network()
@@ -163,7 +163,7 @@ def main():
     user = network.get_user(USERNAME)
 
     # Create the bucket if it does not exist
-    utils.create_bucket_if_not_exists(s3, REGION)
+    create_bucket_if_not_exists(s3, REGION)
 
     print(" ============= INFO: BEGIN fetching data from Last.fm ============= \n")
 
