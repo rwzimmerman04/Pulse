@@ -1,8 +1,10 @@
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import get_aws_client, create_bucket_if_not_exists
 import pylast
-import boto3
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 # =============================================================================
@@ -124,44 +126,8 @@ def get_lastfm_network():
     )
 
 # =============================================================================
-# S3 INTERACTIONS
+# S3 UPLOAD
 # =============================================================================
-
-def get_s3_client():
-    """
-    Creates a session to interact with S3 services.
-
-    :return:    S3 client object
-    """
-
-    # Establish connection with S3
-    s3 = boto3.client(
-        service_name='s3',
-        aws_access_key_id=AWS_KEY,
-        aws_secret_access_key=AWS_SECRET,
-        endpoint_url=LS_ENDPOINT,
-    )
-
-    return s3
-
-
-def create_bucket_if_not_exists(s3):
-    """
-    Checks if the bucket exists, if not create a new bucket.
-
-    :param s3:      The S3 client
-    """
-    try:
-        s3.head_bucket(Bucket=BUCKET_NAME)
-        print(f"Bucket {BUCKET_NAME} already exists.")
-    except:
-        print(f"Bucket {BUCKET_NAME} not found. Creating...")
-        s3.create_bucket(
-            Bucket=BUCKET_NAME,
-            CreateBucketConfiguration={'LocationConstraint': REGION}
-        )
-        print(f"Bucket {BUCKET_NAME} created.")
-
 
 def upload_to_s3(s3, data, key):
     """
@@ -188,7 +154,7 @@ def main():
     """
 
     # Retrieve the S3 client
-    s3 = get_s3_client()
+    s3 = utils.get_aws_client('s3')
 
     # Establish connection to PyLast network
     network = get_lastfm_network()
@@ -197,7 +163,7 @@ def main():
     user = network.get_user(USERNAME)
 
     # Create the bucket if it does not exist
-    create_bucket_if_not_exists(s3)
+    utils.create_bucket_if_not_exists(s3, REGION)
 
     print(" ============= INFO: BEGIN fetching data from Last.fm ============= \n")
 
@@ -213,7 +179,7 @@ def main():
     print(" ============= INFO: BEGIN uploading data to S3 ============= \n")
 
     # Get the date
-    today = datetime.now(datetime.UTC).strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     # Upload data to s3
     top_tracks_key = f"top_tracks/{today}.json"

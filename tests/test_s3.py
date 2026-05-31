@@ -1,8 +1,11 @@
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import boto3
 import json
 from datetime import datetime
 from dotenv import load_dotenv
+import utils
 
 # =============================================================================
 # ENVIRONMENT SETUP
@@ -25,24 +28,27 @@ LS_ENDPOINT = os.getenv("LOCALSTACK_ENDPOINT")
 
 def main():
     # Retrieve S3 client
-    s3 = boto3.client(
-        service_name='s3',
-        aws_access_key_id=AWS_KEY,
-        aws_secret_access_key=AWS_SECRET,
-        endpoint_url=LS_ENDPOINT,
-    )
+    # s3 = boto3.client(
+    #     service_name='s3',
+    #     aws_access_key_id=AWS_KEY,
+    #     aws_secret_access_key=AWS_SECRET,
+    #     endpoint_url=LS_ENDPOINT,
+    # )
 
-    # List all objects in the bucket
-    response = s3.list_objects_v2(Bucket=BUCKET_NAME)
-    objects = response.get('Contents', [])
+    s99 = utils.get_aws_client('s99', REGION)
 
-    if not objects:
-        print("Bucket is empty — did the upload run?")
-        return
 
-    print(f"Found {len(objects)} objects in {BUCKET_NAME}:\n")
-    for obj in objects:
-        print(f"  {obj['Key']} ({obj['Size']} bytes)")
+    # # List all objects in the bucket
+    # response = s3.list_objects_v2(Bucket=BUCKET_NAME)
+    # objects = response.get('Contents', [])
+
+    # if not objects:
+    #     print("Bucket is empty — did the upload run?")
+    #     return
+
+    # print(f"Found {len(objects)} objects in {BUCKET_NAME}:\n")
+    # for obj in objects:
+    #     print(f"  {obj['Key']} ({obj['Size']} bytes)")
 
 if __name__ == "__main__":
     main()
