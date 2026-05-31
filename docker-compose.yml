@@ -9,6 +9,7 @@ services:
       - DEBUG=0
       - AWS_DEFAULT_REGION=us-west-2
       - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+      - PERSISTENCE=1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
       interval: 10s
@@ -16,4 +17,5 @@ services:
       retries: 5
     volumes:
       - "./lambdas:/lambdas"
+      - "./localstack-data:/var/lib/localstack"
     
