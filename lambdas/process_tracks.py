@@ -1,9 +1,9 @@
-import boto3
+import time
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
-from utils import get_aws_client
+from utils import get_aws_client, get_aws_resource
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 
@@ -77,8 +77,33 @@ TABLES = {
     }
 }
 
+
+
 # =============================================================================
-# 
+# HELPERS
+# =============================================================================
+
+def to_dynamodb_format(item):
+    """
+    Reformats Python dictionaries to DynamoDB type format
+
+    :param item:    Python item to transform
+    """
+    result = {}
+    for key, value in item.items():
+        if isinstance(value, str):
+            result[key] = {"S": value}
+        elif isinstance(value, (int, float)):
+            result[key] = {"N": str(value)}
+        elif isinstance(value, list):
+            result[key] = {"L": [{"S": v} for v in value]}
+        elif value is None:
+            result[key] = {"NULL": True}
+    return result
+
+
+# =============================================================================
+# EXTRACT
 # =============================================================================
 
 def read_from_s3(s3, key):
@@ -120,7 +145,7 @@ def create_tables_if_not_exist(ddb):
             print(f"Table {table_name} already exists.")
 
 # =============================================================================
-# TRANSFORMS 
+# TRANSFORM
 # =============================================================================
 
 def transform_recent_tracks(data):
@@ -138,6 +163,7 @@ def transform_recent_tracks(data):
         item["day_of_week"]=dt.strftime("%A")
 
     return data
+
 
 def transform_top_tracks(data, period, date):
     """
@@ -176,20 +202,60 @@ def transform_top_artists(data, period, date):
     return data
 
 # =============================================================================
+# LOAD 
+# =============================================================================
+
+def write_to_dynamodb(ddb, table_name, items):
+    """
+    Loads a list of enriched data items into DynamoDB table
+
+    :param ddb:         The DynamoDB client
+    :param table_name:  The name of the table
+    :param items:       List of data to load
+    """
+    
+    # Batch load items into DynamoDB table
+    for i in range(0, len(items), 25):
+        # Retrieve and reformat 25 items at a time
+        chunk = items[i:i+25]
+        converted = [to_dynamodb_format(item) for item in chunk]
+        # Build put request for DynamoDB uplaod
+        request_items = {table_name: [{"PutRequest": {"Item": it}} for it in converted]}
+        tries, back_off = 0, 1
+        while True:
+            # Attempt to store items
+            response = ddb.batch_write_item(RequestItems=request_items)
+            unprocessed = response.get("UnprocessedItems", {})
+            # If we have tried more than 5 times or all items were processed, break out
+            if not unprocessed or tries >= 5:
+                break
+            # Set request items to remaining data
+            request_items = unprocessed
+            # Sleep for a spell...
+            time.sleep(back_off)
+            # Add a try and implement back_off update for exponential back_off
+            back_off = min(back_off * 2, 32)
+            tries += 1
+
+# =============================================================================
 # MAIN 
 # =============================================================================
 
 def main():
     # Get S3 & DynamoDB clients
     s3 = get_aws_client('s3', REGION)
-    ddb = get_aws_client('dynamodb', REGION)
+
+    ddb_client = get_aws_client('dynamodb', REGION)
 
     # Create missing DynamoDB tables
-    create_tables_if_not_exist(ddb)
+    create_tables_if_not_exist(ddb_client)
 
     # Read the raw JSON from S3
 
+
     
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
 
     # Transform data into DynamoDB schema
 
