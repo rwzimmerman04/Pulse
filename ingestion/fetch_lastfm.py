@@ -30,6 +30,14 @@ AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
 
 # Constants
 LAST_RUN_KEY="state/last_fetched.json"
+PERIODS = [
+    pylast.PERIOD_7DAYS,
+    pylast.PERIOD_1MONTH,
+    pylast.PERIOD_3MONTHS,
+    pylast.PERIOD_6MONTHS,
+    pylast.PERIOD_12MONTHS,
+    pylast.PERIOD_OVERALL,
+]
 
 
 # =============================================================================
@@ -231,16 +239,7 @@ def main():
     # Get the date
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    periods = [
-        pylast.PERIOD_7DAYS,
-        pylast.PERIOD_1MONTH,
-        pylast.PERIOD_3MONTHS,
-        pylast.PERIOD_6MONTHS,
-        pylast.PERIOD_12MONTHS,
-        pylast.PERIOD_OVERALL,
-    ]
-
-    for period in periods:
+    for period in PERIODS:
         # Fetch and upload the top tracks
         print(f"[INFO]: Fetching top tracks for the last {period}\n")
         top_tracks = fetch_top_tracks(user, period=period)
