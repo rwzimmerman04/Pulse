@@ -104,18 +104,66 @@ pulse/
 
 ---
 
-## Status
-- [X] Repo initialized
-- [X] .gitignore and .env.example committed
-- [X] Lastfm accoutn setup
-- [X] Docker Compose + LocalStack setup
-- [X] Last.fm ingestion script
-- [X] S3 raw storage
+## Known Limitations
+
+- **No audio features:** Last.fm does not provide audio analysis data (mood, valence, energy, danceability, tempo) that Spotify's Web API offers. Genre tags are used as a rough proxy. Switching to Spotify's API would unlock these features, only the ingestion module would need to change.
+
+- **Spotify Premium required for Spotify API:** The original design used Spotify's Web API but it requires a Premium subscription. Last.fm is used as a free alternative with full scrobbling support.
+
+- **Manual data refresh:** The pipeline does not run automatically. Data must be refreshed manually by running the ingestion script. A scheduled trigger (e.g. AWS EventBridge) would automate this in a production deployment.
+
+- **Local only:** The pipeline runs entirely on LocalStack and is not deployed to real AWS. The architecture is identical to a real deployment, only the endpoint URLs would change.
+
+---
+
+## AWS Migration Plan
+
+This project is designed to run locally via LocalStack but mirrors real AWS architecture.
+The following section outlines a plan to migrate to a live AWS environment.
+
+### Discovery
+- Use **AWS Application Discovery Service (ADS)** to inventory the local services
+- Document current resource usage: S3 bucket, DynamoDB tables, Lambda functions, API Gateway
+
+### Migration Steps
+1. **S3** — create a real S3 bucket, update `LOCALSTACK_ENDPOINT` to point at AWS
+2. **DynamoDB** — recreate tables in AWS, same schema
+3. **Lambda** — deploy `process_tracks.py` and `api_handler.py` via AWS Lambda console or CLI
+4. **API Gateway** — recreate REST API and wire to Lambda functions
+5. **EventBridge** — add a scheduled rule to trigger ingestion Lambda daily (replaces manual runs)
+
+### What Changes
+- Remove `endpoint_url` from boto3 clients — they'll point to real AWS automatically
+- Set real AWS credentials in environment
+- Everything else stays identical
+
+### Documentation
+See `docs/aws-migration/` for screenshots and notes from the actual migration process.
+
+---
+
+## Roadmap
+
+### Core Pipeline
+- [x] Repo initialized
+- [x] .gitignore and .env.example committed
+- [x] Last.fm account setup and scrobbling
+- [x] Docker Compose + LocalStack setup
+- [x] Last.fm ingestion script
+- [x] S3 raw storage
 - [ ] Lambda processing
 - [ ] DynamoDB schema
 - [ ] API Gateway + Lambda API
 - [ ] Frontend dashboard
 
+### Stretch Goals
+- [ ] Refresh button on dashboard to manually trigger ingestion
+- [ ] Scheduled ingestion via cron job (local) or EventBridge (AWS)
+- [ ] Swap ingestion module for Spotify Web API to unlock audio features (mood, energy, danceability)
+- [ ] AWS migration — deploy to real AWS and document the process
+- [ ] Artist tag-based mood scoring as a Last.fm alternative to Spotify audio features
+- [ ] Historical trend view — how your taste changes month over month
+- [ ] Multi-user SaaS version with hosted backend and OAuth Last.fm login
 ---
 
 ## Developer

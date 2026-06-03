@@ -28,6 +28,9 @@ REGION = os.getenv("AWS_DEFAULT_REGION")
 AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
 
+# Constants
+LAST_RUN_KEY="state/last_fetched.json"
+
 
 # =============================================================================
 # DATA FETCH FUNCTIONS
@@ -88,7 +91,7 @@ def fetch_top_artists(user, period=pylast.PERIOD_7DAYS, limit=50):
         artists.append(artist)
     return artists
 
-def fetch_recent_tracks(user, limit=50):
+def fetch_recent_tracks(user, limit=50, time_from=None):
     """
     Retrieves the user's recent track listens and cleans the data for storage.
     
@@ -98,7 +101,7 @@ def fetch_recent_tracks(user, limit=50):
     """
 
     # Fetch the recent tracks (API call)
-    recent_tracks = user.get_recent_tracks(limit=limit)
+    recent_tracks = user.get_recent_tracks(limit=limit, time_from=time_from)
     recents = []
 
     for item in recent_tracks:
@@ -112,7 +115,7 @@ def fetch_recent_tracks(user, limit=50):
     return recents
 
 # =============================================================================
-# MAIN
+# Setup LASTFM network
 # =============================================================================
 
 def get_lastfm_network():
@@ -124,6 +127,60 @@ def get_lastfm_network():
         api_secret=API_SECRET,
         username=USERNAME
     )
+
+# =============================================================================
+# SCROBBLE TIMESTAMP READ/WRITE
+# =============================================================================
+
+def write_last_scrobble(s3, last_scrobble_timestamp):
+    """
+    Writes last scrobble time and last API call to the S3 Bucket
+
+    :param s3:              The S3 client
+    :param last_scrobble_timestamp:     The timestamp of the last scrobble
+    """
+    
+    # Create dictionary
+    state = {}
+
+    # Get the date and time
+    time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+
+    # Add current time and latest timestamp values
+    state["last_run"] = time
+    state["last_scrobble_timestamp"] = last_scrobble_timestamp
+
+    # Dump dictionary into JSON message
+    json_string = json.dumps(state)
+
+    # Push JSON to the S3 Bucket
+    s3.put_object(Bucket=BUCKET_NAME, Key=LAST_RUN_KEY, Body=json_string)
+
+
+def read_last_scrobble(s3):
+    """
+    Fetches and returns dictionary of last API call and timestamped track.
+
+    :param s3:      The S3 client
+    :return:        Dictionary with last_run and last_scrobble_timestamp values
+
+
+    Example return value:
+        {
+            "last_run": "2026-05-30T20:00:00",
+            "last_scrobble_timestamp": "1780097840"
+        }
+    """
+    
+    try:
+        # Get Json object from the S3 Bucket
+        response = s3.get_object(Bucket=BUCKET_NAME, Key=LAST_RUN_KEY)
+        return json.loads(response['Body'].read())
+    except:
+        return {
+            "last_run": None,
+            "last_scrobble_timestamp": None
+        }
 
 # =============================================================================
 # S3 UPLOAD
@@ -154,7 +211,7 @@ def main():
     """
 
     # Retrieve the S3 client
-    s3 = get_aws_client('s3')
+    s3 = get_aws_client('s3', REGION)
 
     # Establish connection to PyLast network
     network = get_lastfm_network()
@@ -165,32 +222,47 @@ def main():
     # Create the bucket if it does not exist
     create_bucket_if_not_exists(s3, REGION)
 
+    # Fetch last scrobble
+    state = read_last_scrobble(s3)
+    last_scrobble = state["last_scrobble_timestamp"]
+
     print(" ============= INFO: BEGIN fetching data from Last.fm ============= \n")
-
-    # Fetch the top tracks
-    top_tracks = fetch_top_tracks(user, period=pylast.PERIOD_7DAYS)
-
-    # Fetch the top artists
-    top_artists = fetch_top_artists(user, period=pylast.PERIOD_7DAYS)
-
-    # Fetch the recent tracks
-    recent_tracks = fetch_recent_tracks(user)
-
-    print(" ============= INFO: BEGIN uploading data to S3 ============= \n")
 
     # Get the date
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    # Upload data to s3
-    top_tracks_key = f"top_tracks/{today}.json"
-    upload_to_s3(s3, top_tracks, top_tracks_key)
+    periods = [
+        pylast.PERIOD_7DAYS,
+        pylast.PERIOD_1MONTH,
+        pylast.PERIOD_3MONTHS,
+        pylast.PERIOD_6MONTHS,
+        pylast.PERIOD_12MONTHS,
+        pylast.PERIOD_OVERALL,
+    ]
+
+    for period in periods:
+        # Fetch and upload the top tracks
+        print(f"[INFO]: Fetching top tracks for the last {period}\n")
+        top_tracks = fetch_top_tracks(user, period=period)
+        print(f"[INFO]: Uploading top tracks for the last {period}\n")
+        upload_to_s3(s3, top_tracks, f"top_tracks/{period}/{today}.json")
     
-    top_artists_key = f"top_artists/{today}.json"
-    upload_to_s3(s3, top_artists, top_artists_key)
-    
+        # Fetch and upload the top artists
+        print(f"[INFO]: Fetching top artists for the last {period}\n")
+        top_artists = fetch_top_artists(user, period=period)
+        print(f"[INFO]: Uploading top artists for the last {period}\n")
+        upload_to_s3(s3, top_artists, f"top_artists/{period}/{today}.json")
+
+
+    # Upload recent tracks data to s3
     recent_tracks_key = f"recent_tracks/{today}.json"
+    print("[INFO]: Fetching recent tracks")
+    recent_tracks = fetch_recent_tracks(user, limit=200, time_from=last_scrobble)
+    print("[INFO]: Uploading recent tracks")
     upload_to_s3(s3, recent_tracks, recent_tracks_key)
 
+    if recent_tracks:
+        write_last_scrobble(s3, recent_tracks[0]["timestamp"])
 
 if __name__ == "__main__":
     main()
