@@ -55,8 +55,27 @@ TABLES = {
             {"AttributeName": "timestamp", "KeyType": "HASH"},
         ],
     },
+    "pulse_hourly_plays": {
+        "AttributeDefinitions": [
+            {"AttributeName": "date", "AttributeType": "S"},
+            {"AttributeName": "hour", "AttributeType": "N"},
+        ],
+        "KeySchema": [
+            {"AttributeName": "date", "KeyType": "HASH"},
+            {"AttributeName": "hour", "KeyType": "RANGE"}
+        ],
+    },
+    "pulse_genre_dist": {
+        "AttributeDefinitions": [
+            {"AttributeName": "period", "AttributeType": "S"},
+            {"AttributeName": "date", "AttributeType": "S"},
+        ],
+        "KeySchema": [
+            {"AttributeName": "period", "KeyType": "HASH"},
+            {"AttributeName": "date", "KeyType": "RANGE"}
+        ],
+    }
 }
-
 
 # =============================================================================
 # 
