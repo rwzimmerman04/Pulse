@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 from utils import get_aws_client
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timezone
 
 # =============================================================================
 # ENVIRONMENT SETUP
@@ -119,9 +119,61 @@ def create_tables_if_not_exist(ddb):
         else:
             print(f"Table {table_name} already exists.")
 
-    
+# =============================================================================
+# TRANSFORMS 
+# =============================================================================
+
+def transform_recent_tracks(data):
+    """
+    Takes raw data from S3 and returns a new list with extra computed fields 
+    added to each record.
+
+    :param data:    Recent tracks data
+    :return:        List of enriched recent tracks data
+    """
+
+    for item in data:
+        dt = datetime.fromtimestamp(int(item["timestamp"]), tz=timezone.utc)
+        item["hour"]=dt.hour
+        item["day_of_week"]=dt.strftime("%A")
+
+    return data
+
+def transform_top_tracks(data, period, date):
+    """
+    Takes raw top-track data from S3 and enriches data by adding the sort and 
+    partition keys.
+
+    :param data:        Dictionary of data from S3 fetch
+    :param period:      Period the data covers (7DAYS, 1MONTH, 3MONTHS, ...)
+    :param date:        Date the data was fetched from Last.fm
+
+    :return:            Enriched data dictionary
+    """
+
+    for item in data:
+        item["artist_track"] = item["artist_name"] + "#" + item["track_name"]
+        item["period_date"] = period + "#" + date
+
+    return data
 
 
+def transform_top_artists(data, period, date):
+    """
+    Takes raw top-artist data from S3 and enriches data by adding the sort and 
+    partition keys.
+
+    :param data:        Dictionary of data from S3 fetch
+    :param period:      Period the data covers (7DAYS, 1MONTH, 3MONTHS, ...)
+    :param date:        Date the data was fetched from Last.fm
+
+    :return:            Enriched data dictionary
+    """
+
+    for item in data:
+        item["period_date"] = period + "#" + date
+
+    return data
 
 # =============================================================================
 # MAIN 

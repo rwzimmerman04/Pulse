@@ -54,8 +54,8 @@ def fetch_top_tracks(user, period=pylast.PERIOD_7DAYS, limit=50):
     # Clean the data for storage, grab only what we want
     for rank, item in enumerate(top_tracks, start=1):
         track = {
-            "artist": item.item.artist.name,
-            "track": item.item.title,
+            "artist_name": item.item.artist.name,
+            "track_name": item.item.title,
             "weight": item.weight,
             "rank": rank,
             "period": period
@@ -82,7 +82,7 @@ def fetch_top_artists(user, period=pylast.PERIOD_7DAYS, limit=50):
     # Clean the data
     for rank, item in enumerate(top_artists, start=1):
         artist = {
-            "name": item.item.name,
+            "artist_name": item.item.name,
             "rank": rank,
             "play_count": item.weight,
             "tags": [tag.item.name for tag in item.item.get_top_tags(limit=3)],
@@ -106,8 +106,8 @@ def fetch_recent_tracks(user, limit=50, time_from=None):
 
     for item in recent_tracks:
         played = {
-            "name": item.track.title,
-            "artist": item.track.artist.name,
+            "track_name": item.track.title,
+            "artist_name": item.track.artist.name,
             "timestamp": item.timestamp,
             "playback_date": item.playback_date
         }
