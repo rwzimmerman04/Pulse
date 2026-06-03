@@ -25,7 +25,7 @@ AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
 LOCALSTACK_ENDPOINT = os.getenv("LOCALSTACK_ENDPOINT")
 BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 
-# Table definitions
+# Table schemas
 TABLES = {
     "pulse_top_tracks": {
         "AttributeDefinitions": [
@@ -77,6 +77,8 @@ TABLES = {
     }
 }
 
+# Constants
+PERIODS = ["7day", "1month", "3month", "6month", "12month", "overall"]
 
 
 # =============================================================================
@@ -161,6 +163,7 @@ def transform_recent_tracks(data):
         dt = datetime.fromtimestamp(int(item["timestamp"]), tz=timezone.utc)
         item["hour"]=dt.hour
         item["day_of_week"]=dt.strftime("%A")
+        item["date"]=dt.strftime("%Y-%m-%d")
 
     return data
 
@@ -200,6 +203,54 @@ def transform_top_artists(data, period, date):
         item["period_date"] = period + "#" + date
 
     return data
+
+def compute_hourly_plays(recent_tracks):
+    """
+    Takes encriched recent tracks list and returns a list of records
+
+    :param recent_tracks:   The enriched recent tracks list
+    :return:                List of formatted records
+    """
+
+    counts = {}
+
+    for item in recent_tracks:
+        key = (item["date"], item["hour"], item["day_of_week"])
+        counts[key] = counts.get(key, 0) + 1
+
+    return [
+        {"date": k[0], "hour": k[1], "day_of_week": k[2], "play_count": v}
+        for k, v in counts.items()
+    ]
+
+
+def compute_genre_dist(top_artists, period, date):
+    """
+    
+    """
+    
+    tag_counts = {}
+    results = []
+
+    # Accumulate tage totals
+    for artist in top_artists:
+        for tag in artist["tags"]:
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        
+    # Build percentage objects
+    num_artists = len(top_artists)
+    for tag, count in tag_counts.items():
+        results.append(
+            {
+                "period": period,
+                "date": date,
+                "genre": tag,
+                "count": count,
+                "percentage": round((count / num_artists) * 100, 1)
+            }
+        )
+
+    return results
 
 # =============================================================================
 # LOAD 
@@ -244,26 +295,14 @@ def write_to_dynamodb(ddb, table_name, items):
 def main():
     # Get S3 & DynamoDB clients
     s3 = get_aws_client('s3', REGION)
-
     ddb_client = get_aws_client('dynamodb', REGION)
 
     # Create missing DynamoDB tables
     create_tables_if_not_exist(ddb_client)
 
-    # Read the raw JSON from S3
-
-
-    
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-
-    # Transform data into DynamoDB schema
-
-
-    # Write to DynamoDB
-
-
-
+    
 
 if __name__ == "__main__":
     main()
