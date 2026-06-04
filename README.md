@@ -51,7 +51,7 @@ Inspired by Last.fm Wrapped but running year-round with custom metrics and full 
 
 ---
 
-## Planned Architecture
+## Architecture
 
 ```
 Last.fm API
@@ -73,7 +73,7 @@ Frontend Dashboard (index.html)
 
 ---
 
-## Planned Repo Structure
+## Repo Structure
 
 ```
 pulse/
@@ -82,7 +82,7 @@ pulse/
 ├── .gitignore                  # excludes .env, __pycache__, etc.
 ├── README.md
 ├── ingestion/
-│   └── fetch_Last.fm.py        # pulls data from Last.fm API
+│   └── fetch_lastfm.py        # pulls data from Last.fm API
 ├── lambdas/
 │   ├── process_tracks.py       # transforms raw S3 data
 │   └── api_handler.py          # serves REST API endpoints
@@ -142,6 +142,13 @@ See `docs/aws-migration/` for screenshots and notes from the actual migration pr
 
 ---
 
+## Live Demo
+A live version of this dashboard is deployed on AWS and hosted at [TheChromeNaga.com](http://TheChromeNaga.com) (coming soon).
+
+The live version uses real AWS services (not LocalStack) with daily automated ingestion via EventBridge. The frontend is served from my personal website and pulls data from a real API Gateway endpoint.
+
+---
+
 ## Roadmap
 
 ### Core Pipeline
@@ -151,8 +158,8 @@ See `docs/aws-migration/` for screenshots and notes from the actual migration pr
 - [x] Docker Compose + LocalStack setup
 - [x] Last.fm ingestion script
 - [x] S3 raw storage
-- [ ] Lambda processing
-- [ ] DynamoDB schema
+- [x] Lambda processing
+- [x] DynamoDB schema
 - [ ] API Gateway + Lambda API
 - [ ] Frontend dashboard
 
@@ -164,6 +171,15 @@ See `docs/aws-migration/` for screenshots and notes from the actual migration pr
 - [ ] Artist tag-based mood scoring as a Last.fm alternative to Spotify audio features
 - [ ] Historical trend view — how your taste changes month over month
 - [ ] Multi-user SaaS version with hosted backend and OAuth Last.fm login
+- [ ] Deploy to real AWS — S3, Lambda, DynamoDB, API Gateway
+- [ ] Terraform infrastructure as code for AWS provisioning and teardown
+- [ ] Live demo hosted on personal website with daily automated updates via EventBridge
+
+---
+
+## Contributing
+Contributions welcome! Feel free to open an issue or submit a pull request.
+
 ---
 
 ## Developer
