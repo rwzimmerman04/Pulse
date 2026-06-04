@@ -104,7 +104,7 @@ def fetch_recent_tracks(user, limit=50, time_from=None):
     Retrieves the user's recent track listens and cleans the data for storage.
     
     :param user:    pylast User object
-    :param limit:   Max number of artists to retrieve
+    :param limit:   Max number of tracks to retrieve
     :return:        List of recent track dictionaries
     """
 
