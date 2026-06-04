@@ -3,7 +3,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
-from utils import get_aws_client, get_aws_resource
+from utils import get_aws_client
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 
@@ -39,11 +39,11 @@ TABLES = {
     },
     "pulse_top_artists": {
         "AttributeDefinitions": [
-            {"AttributeName": "artist", "AttributeType": "S"},
+            {"AttributeName": "artist_name", "AttributeType": "S"},
             {"AttributeName": "period_date", "AttributeType": "S"},
         ],
         "KeySchema": [
-            {"AttributeName": "artist", "KeyType": "HASH"},
+            {"AttributeName": "artist_name", "KeyType": "HASH"},
             {"AttributeName": "period_date", "KeyType": "RANGE"},
         ],
     },
@@ -67,12 +67,12 @@ TABLES = {
     },
     "pulse_genre_dist": {
         "AttributeDefinitions": [
-            {"AttributeName": "period", "AttributeType": "S"},
-            {"AttributeName": "date", "AttributeType": "S"},
+            {"AttributeName": "period_date", "AttributeType": "S"},
+            {"AttributeName": "genre", "AttributeType": "S"},
         ],
         "KeySchema": [
-            {"AttributeName": "period", "KeyType": "HASH"},
-            {"AttributeName": "date", "KeyType": "RANGE"}
+            {"AttributeName": "period_date", "KeyType": "HASH"},
+            {"AttributeName": "genre", "KeyType": "RANGE"},
         ],
     }
 }
@@ -242,8 +242,7 @@ def compute_genre_dist(top_artists, period, date):
     for tag, count in tag_counts.items():
         results.append(
             {
-                "period": period,
-                "date": date,
+                "period_date": period + "#" + date,
                 "genre": tag,
                 "count": count,
                 "percentage": round((count / num_artists) * 100, 1)
@@ -302,7 +301,39 @@ def main():
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    
+    print("============= INFO: BEGIN processing top tracks and artists =============")
+
+    for period in PERIODS:
+        # Extract
+        top_tracks = read_from_s3(s3, f"top_tracks/{period}/{today}.json")
+        top_artists = read_from_s3(s3, f"top_artists/{period}/{today}.json")
+
+        # Transform
+        top_tracks = transform_top_tracks(top_tracks, period, today)
+        top_artists = transform_top_artists(top_artists, period, today)
+
+        # Compute
+        genre_dist = compute_genre_dist(top_artists, period, today)
+
+        # Load
+        write_to_dynamodb(ddb_client, "pulse_top_tracks", top_tracks)
+        write_to_dynamodb(ddb_client, "pulse_top_artists", top_artists)
+        write_to_dynamodb(ddb_client, "pulse_genre_dist", genre_dist)
+
+        print(f"  [{period}] tracks and artists processed.")
+
+    print("============= INFO: BEGIN processing recent tracks =============")
+
+    # Read, transform, write recent tracks
+    recent_tracks = read_from_s3(s3, f"recent_tracks/{today}.json")
+    recent_tracks = transform_recent_tracks(recent_tracks)
+    write_to_dynamodb(ddb_client, "pulse_recent_tracks", recent_tracks)
+
+    hourly_plays = compute_hourly_plays(recent_tracks)
+    write_to_dynamodb(ddb_client, "pulse_hourly_plays", hourly_plays)
+
+    print("============= INFO: Processing complete =============")
+
 
 if __name__ == "__main__":
     main()
