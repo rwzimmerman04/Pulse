@@ -3,7 +3,8 @@ import os
 from dotenv import load_dotenv
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils import get_aws_client
+from utils import get_aws_client, from_dynamodb_format
+from constants import TABLE_TOP_TRACKS, GSI_PERIOD_RANK, PERIODS
 
 # =============================================================================
 # ENVIRONMENT SETUP
@@ -26,6 +27,7 @@ CORS_HEADERS = {
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Content-Type": "application/json",
 }
+
 
 # =============================================================================
 # API REQUESTS AND RESPONSES
@@ -77,8 +79,27 @@ def handler(event, context):
 # ROUTE FUNCTIONS
 # =============================================================================
 
-def get_top_tracks(ddb, period, date):
-    pass
+def get_top_tracks(ddb, period, date, limit=10):
+    """
+    Retrieve the top_tracks in rank order
+
+    :param ddb:         The DynamoDB client
+    :param period:      The period of search for filtering
+    :param date:        The date to search for a specific date
+    :param limit:       The max amount of records to retrieve
+
+    :return:            Fetched top_track records from the table
+    """
+    response = ddb.query(
+        TableName=TABLE_TOP_TRACKS,
+        IndexName=GSI_PERIOD_RANK,
+        KeyConditionExpression="period_date = :pd",
+        ExpressionAttributeValues={":pd": {"S": f"{period}#{date}"}},
+        Limit=limit,
+    )
+    
+    items = [from_dynamodb_format(item) for item in response.get("Items", [])]
+    return items
 
 
 def get_top_artists(ddb, period, date):
