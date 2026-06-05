@@ -13,9 +13,6 @@ from datetime import datetime, timezone
 
 load_dotenv()
 
-# Retrieve bucket name
-BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-
 # Retrieve AWS credentials
 REGION = os.getenv("AWS_DEFAULT_REGION")
 AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
@@ -31,28 +28,61 @@ TABLES = {
         "AttributeDefinitions": [
             {"AttributeName": "artist_track", "AttributeType": "S"},
             {"AttributeName": "period_date", "AttributeType": "S"},
+            {"AttributeName": "rank", "AttributeType": "N"},
         ],
         "KeySchema": [
             {"AttributeName": "artist_track", "KeyType": "HASH"},
             {"AttributeName": "period_date", "KeyType": "RANGE"},
+        ],
+        "GlobalSecondaryIndexes": [
+            {
+                "IndexName": "period_date-rank-index",
+                "KeySchema": [
+                    {"AttributeName": "period_date", "KeyType": "HASH"},
+                    {"AttributeName": "rank", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            }
         ],
     },
     "pulse_top_artists": {
         "AttributeDefinitions": [
             {"AttributeName": "artist_name", "AttributeType": "S"},
             {"AttributeName": "period_date", "AttributeType": "S"},
+            {"AttributeName": "rank", "AttributeType": "N"},
         ],
         "KeySchema": [
             {"AttributeName": "artist_name", "KeyType": "HASH"},
             {"AttributeName": "period_date", "KeyType": "RANGE"},
         ],
+        "GlobalSecondaryIndexes": [
+            {
+                "IndexName": "period_date-rank-index",
+                "KeySchema": [
+                    {"AttributeName": "period_date", "KeyType": "HASH"},
+                    {"AttributeName": "rank", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            }
+        ],
     },
     "pulse_recent_tracks": {
         "AttributeDefinitions": [
             {"AttributeName": "timestamp", "AttributeType": "S"},
+            {"AttributeName": "date", "AttributeType": "S"},
         ],
         "KeySchema": [
             {"AttributeName": "timestamp", "KeyType": "HASH"},
+        ],
+        "GlobalSecondaryIndexes": [
+            {
+                "IndexName": "date-timestamp-index",
+                "KeySchema": [
+                    {"AttributeName": "date", "KeyType": "HASH"},
+                    {"AttributeName": "timestamp", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            }
         ],
     },
     "pulse_hourly_plays": {
