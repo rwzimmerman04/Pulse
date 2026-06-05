@@ -60,3 +60,26 @@ def create_bucket_if_not_exists(s3_client, bucket_region='us-west-2'):
             CreateBucketConfiguration={'LocationConstraint': bucket_region}
         )
         print(f"Bucket {BUCKET_NAME} created.")
+
+
+def from_dynamodb_format(item):
+    """
+    Reformats DynamoDB objects into Python distionaries
+
+    :param item:    Item to reformat
+
+    :return:        Table contents in python dictionary 
+    """
+    result = {}
+    for key, value in item.items():
+        type_key = list(value.keys())[0]
+        val = list(value.values())[0]
+        if type_key == "S":
+            result[key] = val
+        elif type_key == "N":
+            result[key] = float(val) if "." in val else int(val)
+        elif type_key == "L":
+            result[key] = [list(v.values())[0] for v in val]
+        elif type_key == "NULL":
+            result[key] = None
+    return result
